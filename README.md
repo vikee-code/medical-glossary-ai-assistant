@@ -1,1 +1,1 @@
-# medical-image-analyzer-assistant
+# medical-glossary-ai-assistant
