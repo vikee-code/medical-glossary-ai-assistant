@@ -1,4 +1,5 @@
 import streamlit as st
+from modules.gemini_client import get_gemini_response
 
 st.set_page_config(
     page_title="Medical Image Analyzer Assistant",
@@ -64,24 +65,35 @@ Upload a medical image or ask a question to get started.
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    prompt = st.chat_input(
-        "Ask a medical imaging question..."
+prompt = st.chat_input(
+    "Ask a medical imaging question..."
+)
+
+if prompt:
+
+    st.session_state.messages.append(
+        {
+            "role": "user",
+            "content": prompt
+        }
     )
 
-    if prompt:
+    try:
 
-        st.session_state.messages.append(
-            {
-                "role": "user",
-                "content": prompt
-            }
+        response = get_gemini_response(
+            api_key,
+            prompt
         )
 
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": f"You asked: {prompt}"
-            }
-        )
+    except Exception as e:
 
-        st.rerun()
+        response = f"Error: {str(e)}"
+
+    st.session_state.messages.append(
+        {
+            "role": "assistant",
+            "content": response
+        }
+    )
+
+    st.rerun()
