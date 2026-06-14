@@ -2,98 +2,99 @@ import streamlit as st
 from modules.gemini_client import get_gemini_response
 
 st.set_page_config(
-    page_title="Medical Image Analyzer Assistant",
+    page_title="Medical Terminology Assistant",
     page_icon="🩺",
-    layout="wide"
+    layout="centered"  
 )
 
-st.title("🩺 Medical Image Analyzer Assistant")
+st.title("🩺 Medical Terminology Assistant")
 
 st.markdown("""
-### Welcome
+### Selamat Datang
 
-This assistant helps healthcare professionals:
+Asisten AI ini dirancang khusus untuk membantu Anda:
+- **Menerjemahkan Istilah Medis**: Mengubah bahasa kedokteran yang rumit menjadi penjelasan yang mudah dipahami orang awam.
+- **Menjelaskan Hasil Lab/Diagnosis**: Membantu memahami arti dari kata-kata asing di lembar diagnosis atau hasil laboratorium Anda.
+- **Kamus Kesehatan Portabel**: Menjawab pertanyaan seputar singkatan atau prosedur medis.
 
-- Analyze medical images
-- Generate observations
-- Explain medical findings
-- Assist image interpretation
-
-⚠️ This tool is intended for decision support and educational purposes only.
+⚠️ **PENTING**: *Alat ini hanya berfungsi sebagai media edukasi dan pendukung informasi. Alat ini tidak menggantikan diagnosis, saran, atau perawatan dari dokter profesional.*
 """)
 
 st.divider()
 
+
+if "started" not in st.session_state:
+    st.session_state["started"] = False
+
+
 api_key = st.text_input(
-    "Enter your Gemini API Key",
+    "Masukkan Gemini API Key Anda untuk Memulai",
     type="password",
-    placeholder="AIza..."
+    placeholder="AIzaSy..."
 )
 
 if api_key:
-    st.success("API Key loaded successfully!")
+    st.success("API Key berhasil dimuat!")
 
-if st.button(
-    "Start Assistant",
-    disabled=not bool(api_key)
-):
+
+if st.button("Mulai Asisten", disabled=not bool(api_key)):
     st.session_state["started"] = True
 
-if st.session_state.get("started", False):
+st.divider()
+
+if st.session_state["started"]:
 
     if "messages" not in st.session_state:
         st.session_state.messages = [
             {
                 "role": "assistant",
                 "content": """
-Hello Doctor 👋
+Halo! Saya adalah **Asisten Istilah Medis** Anda. 👋
 
-I can help you:
+Tugas saya adalah menjelaskan bahasa atau istilah kedokteran yang rumit menjadi kalimat yang santai dan mudah dipahami oleh orang awam.
 
-• Analyze medical images
-• Explain findings
-• Generate observations
-• Assist image interpretation
-
-Upload a medical image or ask a question to get started.
+**Apa yang ingin Anda tanyakan hari ini?**
+*Contoh: "Apa itu kardiomegali?" atau "Apa arti istilah 'suspek' pada hasil rontgen?"*
 """
             }
         ]
 
+    
     for message in st.session_state.messages:
-
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-prompt = st.chat_input(
-    "Ask a medical imaging question..."
-)
+    prompt = st.chat_input("Tanyakan istilah medis di sini...")
 
-if prompt:
+    if prompt:
+        # Tampilkan langsung pesan dari user ke layar
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": prompt
-        }
-    )
-
-    try:
-
-        response = get_gemini_response(
-            api_key,
-            prompt
-        )
-
-    except Exception as e:
-
-        response = f"Error: {str(e)}"
-
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": response
-        }
-    )
-
-    st.rerun()
+        with st.chat_message("assistant"):
+            with st.spinner("Sedang merangkum penjelasan..."):
+                try:
+                    # Persona LLM
+                    system_instruction = (
+                        "Anda adalah seorang dokter ramah yang ahli menjelaskan istilah medis rumit "
+                        "menjadi analogi atau bahasa yang sangat sederhana, mudah dipahami orang awam, "
+                        "dan menenangkan tanpa mengurangi esensi akurasi medisnya. Gunakan bahasa Indonesia."
+                    )
+                    
+                    full_prompt = f"{system_instruction}\n\nPertanyaan User: {prompt}"
+                    
+                    # Panggil function dari gemini_client.py 
+                    response = get_gemini_response(api_key, full_prompt)
+                    
+                except Exception as e:
+                    response = f"Gagal mendapatkan respon dari AI. Error: {str(e)}"
+                
+                # Tampilkan respons asisten ke layar
+                st.markdown(response)
+        
+        # Simpan respons asisten ke dalam riwayat session_state
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        
+        st.rerun()
